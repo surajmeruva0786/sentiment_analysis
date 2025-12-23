@@ -2,8 +2,8 @@
 constitution_aware_pipeline.py
 
 Enhanced End-to-End Demo:
-- Multilingual KB: Telugu, Hindi, Tamil, Bengali, English (extended)
-- Latin->Native transliteration mapping
+- Big Multilingual KB: Telugu, Hindi, Tamil, Bengali, English (extended)
+- Latin->Native transliteration mapping (expanded)
 - Fuzzy/phonetic matching using rapidfuzz
 - Bias, toxicity, fluency scoring
 - Constitution-aware decoding
@@ -18,28 +18,147 @@ import pandas as pd
 from datetime import datetime
 
 # ---------------------------
-# Extended Knowledge Base
+# Heavily-Expanded Knowledge Base
 # ---------------------------
 KNOWLEDGE_BASE = {
-    "hindi": ["दलित", "ब्राह्मण", "मुसलमान", "हिन्दू", "अछूत", "क्षत्रिय"],
-    "telugu": ["మాదిగ", "కాపు", "ముస్లిం", "హిందూ", "బ్రాహ్మణ", "రాజు"],
-    "tamil": ["தலித்", "பிராமணர்", "முஸ்லீம்", "இந்துக்", "சூப்பிரமணியர்"],
-    "bengali": ["দলিত", "ব্রাহ্মণ", "মুসলিম", "হিন্দু", "কৃষ্ণ"],
-    "english": ["dalit", "brahmin", "brahman", "muslim", "hindu", "kapu", "raju", "kshatriya"]
+    "hindi": [
+        # Caste / community
+        "दलित", "ब्राह्मण", "क्षत्रिय", "वैश्य", "कुम्हार", "यादव", "जाट", "रेड्डी", "नायर", "मराठा",
+        "ब्रम्हण", "पंडित", "ब्राह्मण समुदाय", "ठाकुर", "ठाकुरों", "बिहारी", "राजपूत", "सिख", "ईसाई",
+        "जैन", "बौद्ध", "आदिवासी", "गोंड", "संताल", "खासी",
+        # Religion / religion-adjacent
+        "मुसलमान", "हिन्दू", "ईसाई", "सिख", "जैन", "बौद्ध", "पारसी",
+        # Regional / ethnicity
+        "बिहारी", "पंजाबी", "कश्मीरी", "गोवा", "मलयाली", "कन्नड़", "तमिल", "तेलुगु", "असमिया", "उड़िया",
+        # Nationalities
+        "पाकिस्तानी", "बांग्लादेशी", "नेपाल", "श्रीलंकाई",
+        # Gender/identity
+        "पुरुष", "महिला", "ट्रांसजेंडर", "हिजड़ा", "नॉन-बाइनरी",
+        # Political parties/groups
+        "भाजपा", "कांग्रेस", "आप", "शिवसेना", "डीएमके", "टीडीपी", "वाईएसआर", "टीआरएस", "सीपीआई", "सीपीएम", "बसपा"
+    ],
+    "telugu": [
+        # Caste / community
+        "మాదిగ", "బ్రాహ్మణ", "రాజు", "కాపు", "రెడ్డి", "వెయిటి", "విక్రమార్కుడు", "యాదవ్", "జాట్",
+        "మరాఠా", "వంశీ", "పండిట్",
+        # Religion
+        "ముస్లిం", "హిందూ", "క్రైస్తవుడు", "సిక్కు", "జైనులు", "బౌద్ధులు", "పార్సీ",
+        # Regional/ethnic
+        "తెలుగు", "తమిళ్", "కన్నడ", "మలయాళం", "అస్సామీ", "ఓరియా",
+        # Nationalities
+        "పాకిస్తాని", "బంగ్లాదేశీ", "నేపాలీ", "శ్రీలంకన్",
+        # Gender/identity
+        "ఆడ", "అబ్బాయిలు", "ట్రాన్స్‌జెండర్", "హిజ్రా", "నాన్-బైనరీ",
+        # Political parties
+        "బిజెపి", "కాంగ్రెస్", "ఆప్", "టీడీపీ", "వైఎస్‌ఆర్‌సిపి", "టీఆర్ఎస్", "సీపీఐ", "సీపీఎం", "బీఎస్పి"
+    ],
+    "tamil": [
+        # Caste / community
+        "தலித்", "பிராமணர்", "ராஜா", "யாதவ்", "ஜாட்", "நாயர்", "வேளை", "பெரியார்", "மராத்தா",
+        # Religion
+        "முஸ்லீம்", "இந்துக்", "கிரிஸ்துவர்", "சிக்", "ஜெயின்", "பௌத்தர்", "பார்சீ",
+        # Regional / ethnicity
+        "தமிழ்", "மலையாளம்", "கன்னட", "பண்டைய தமிழர்", "கோவா",
+        # Nationalities
+        "பாகிஸ்தானி", "பங்களாதேஷ்", "நேபாளி", "இலங்கையைச் சேர்ந்தவர்",
+        # Gender/identity
+        "ஆண்", "பெண்", "மாற்றுபாலினர்", "ஹிஜ்ரா", "நானோ-ಬೈனரி",
+        # Political parties
+        "பாஜக", "காங்கிரஸ்", "ஏஏபி", "திமுக", "அதிமுக", "சிபிஐ", "சிபிஎம்", "பஸ்பா"
+    ],
+    "bengali": [
+        # Caste / community
+        "দলিত", "ব্রাহ্মণ", "যাদব", "জাট", "নাৎ", "বামন", "কৃষ্ণ",
+        # Religion
+        "মুসলিম", "হিন্দু", "খ্রিস্টান", "সিখ", "জৈন", "বৌদ্ধ", "পারসি",
+        # Regional / ethnicity
+        "বিহারী", "পাঞ্জাবি", "কাশ্মীরি", "মালয়ালি", "কন্নড়", "তামিল",
+        # Nationalities
+        "পাকিস্তানি", "বাংলাদেশী", "নেপালী", "শ্রীলঙ্কান",
+        # Gender/identity
+        "পুরুষ", "মহিলা", "ট্রান্সজেন্ডার", "হিজড়া", "নন-বাইনারি",
+        # Political parties
+        "বিজেপি", "কংগ্রেস", "আপ", "টিডিপি", "বিএসপি", "সিপিআই", "সিপিএম"
+    ],
+    "english": [
+        # Caste/community
+        "dalit", "brahmin", "brahman", "kshatriya", "vaishya", "yadav", "jat", "nair", "reddy", "maratha", "kapu", "raju",
+        # Religion
+        "muslim", "hindu", "christian", "sikh", "jain", "buddhist", "parsi",
+        # Regional / ethnicity
+        "bihari", "punjabi", "kashmiri", "goan", "malayali", "kannadiga", "tamilian", "telugu", "assamese", "oriya",
+        # Nationalities
+        "pakistani", "bangladeshi", "nepali", "srilankan", "sri lankan",
+        # Gender/identity
+        "man", "woman", "female", "male", "transgender", "hijra", "non-binary", "nonbinary",
+        # Political parties
+        "bjp", "bharatiya janata party", "congress", "aam aadmi party", "shivsena", "dmk", "tdp", "ysrcp", "trs", "cpi", "cpim", "bsp",
+        # Misc community identifiers
+        "tribal", "adivasi", "indigenous", "dalit rights", "lower caste", "upper caste"
+    ]
 }
 
 # ---------------------------
-# Complete Latin-to-Native mapping
+# Expanded Latin-to-Native mapping (representative)
 # ---------------------------
 LATIN_TO_NATIVE = {
+    # caste/community
     "dalit": {"hindi": "दलित", "tamil": "தலித்", "bengali": "দলিত", "telugu": "మాదిగ"},
     "brahmin": {"hindi": "ब्राह्मण", "tamil": "பிராமணர்", "bengali": "ব্রাহ্মণ", "telugu": "బ్రాహ్మణ"},
     "brahman": {"hindi": "ब्राह्मण", "tamil": "பிராமணர்", "bengali": "ব্রাহ্মণ"},
-    "muslim": {"hindi": "मुसलमान", "telugu": "ముస్లిం", "tamil": "முஸ்லீம்", "bengali": "মুসলিম"},
-    "hindu": {"hindi": "हिन्दू", "telugu": "హిందూ", "tamil": "இந்துக்", "bengali": "হিন্দু"},
+    "kshatriya": {"hindi": "क्षत्रिय"},
+    "vaishya": {"hindi": "वैश्य"},
+    "yadav": {"hindi": "यादव", "bengali": "যাদব", "telugu": "యాదవ్"},
+    "jat": {"hindi": "जाट", "bengali": "জাট", "telugu": "జాట్"},
+    "nair": {"english": "nair", "hindi": "नायर", "tamil": "நாயர்"},
+    "reddy": {"telugu": "రెడ్డి", "hindi": "रेड्डी"},
+    "maratha": {"hindi": "मराठा", "tamil": "மராத்தா"},
     "kapu": {"telugu": "కాపు"},
     "raju": {"telugu": "రాజు"},
-    "kshatriya": {"hindi": "क्षत्रिय"}
+    # religions
+    "muslim": {"hindi": "मुसलमान", "telugu": "ముస్లిం", "tamil": "முஸ்லீம்", "bengali": "মুসলিম"},
+    "hindu": {"hindi": "हिन्दू", "telugu": "హిందూ", "tamil": "இந்துக்", "bengali": "হিন্দু"},
+    "christian": {"hindi": "ईसाई", "telugu": "క్రైస్తవుడు", "tamil": "கிரிஸ்துவர்", "bengali": "খ্রিস্টান"},
+    "sikh": {"hindi": "सिख", "telugu": "సిక్కు", "tamil": "சிக்", "bengali": "সিখ"},
+    "jain": {"hindi": "जैन", "telugu": "జైనులు", "tamil": "ஜெயின்", "bengali": "জৈন"},
+    "buddhist": {"hindi": "बौद्ध", "telugu": "బౌద్ధులు", "tamil": "பௌத்தர்", "bengali": "বৌদ্ধ"},
+    "parsi": {"hindi": "पारसी", "telugu": "పార్సీ", "tamil": "பார்சீ", "bengali": "পারসি"},
+    # regional / national
+    "bihari": {"hindi": "बिहारी", "bengali": "বিহারী"},
+    "punjabi": {"hindi": "पंजाबी", "bengali": "পাঞ্জাবি", "telugu": "పంజాబ్"},
+    "kashmiri": {"hindi": "कश्मीरी", "bengali": "কাশ্মীরি"},
+    "malayali": {"english": "malayali", "telugu": "మలయాళం", "tamil": "மலையாளம்"},
+    "kannadiga": {"english": "kannadiga", "telugu": "కన్నడ"},
+    "tamilian": {"english": "tamilian", "tamil": "தமிழ்"},
+    "telugu": {"telugu": "తెలుగు"},
+    # nationalities
+    "pakistani": {"hindi": "पाकिस्तानी", "bengali": "পাকিস্তানি", "telugu": "పాకిస్తాని"},
+    "bangladeshi": {"hindi": "बांग्लादेशी", "bengali": "বাংলাদেশী", "telugu": "బంగ్లాదేశీ"},
+    "nepali": {"hindi": "नेपाल", "bengali": "নেপালী", "telugu": "నేపాలి"},
+    "srilankan": {"english": "srilankan", "hindi": "श्रीलंकाई", "bengali": "শ্রীলঙ্কান"},
+    # gender
+    "man": {"hindi": "पुरुष", "telugu": "అబ్బాయి", "tamil": "ஆண்", "bengali": "পুরুষ"},
+    "woman": {"hindi": "महिला", "telugu": "ఆమె", "tamil": "பெண்", "bengali": "মহিলা"},
+    "transgender": {"hindi": "ट्रांसजेंडर", "telugu": "ట్రాన్స్‌జెండర్", "tamil": "மாற்றுபாலினர்", "bengali": "ট্রান্সজেন্ডার"},
+    "hijra": {"hindi": "हिजड़ा", "telugu": "హిజ్రా", "tamil": "ஹிஜ்ரா", "bengali": "হিজড়া"},
+    "nonbinary": {"english": "non-binary", "hindi": "नॉन-बाइनरी"},
+    # political parties (common names and acronyms)
+    "bjp": {"english": "bjp", "hindi": "भाजपा"},
+    "bharatiya janata party": {"hindi": "भारतीय जनता पार्टी"},
+    "congress": {"english": "congress", "hindi": "कांग्रेस"},
+    "aam aadmi party": {"english": "aam aadmi party", "hindi": "आम आदमी पार्टी", "telugu": "ఆమ్ ఆడ్మి పార్టీ"},
+    "shivsena": {"hindi": "शिवसेना", "marathi": "शिवसेना"},
+    "dmk": {"tamil": "திமுக"},
+    "tdp": {"telugu": "టీడీపీ"},
+    "ysrcp": {"telugu": "వైఎస్‌ఆర్‌సిపి"},
+    "trs": {"telugu": "టీఆర్ఎస్"},
+    "cpi": {"english": "cpi", "hindi": "सीपीआई"},
+    "cpim": {"english": "cpim", "hindi": "सीपीएम"},
+    "bsp": {"english": "bsp", "hindi": "बसपा"},
+    # other identifiers
+    "tribal": {"hindi": "आदिवासी", "telugu": "ఆదివాసి", "bengali": "জনজাতীয়"},
+    "adivasi": {"hindi": "आदिवासी"},
+    "indigenous": {"english": "indigenous"},
 }
 
 # ---------------------------
@@ -52,24 +171,40 @@ def detect_bias_terms(text, kb=KNOWLEDGE_BASE, latin_to_native=LATIN_TO_NATIVE, 
     matches = set()
     # Check Latin-key presence and fuzzy match
     for eng_key, native_map in latin_to_native.items():
-        if fuzz.partial_ratio(eng_key, text_low) >= threshold or eng_key in text_low:
-            for lang, native_term in native_map.items():
-                for kb_term in kb.get(lang, []):
-                    if fuzz.partial_ratio(native_term, kb_term) >= threshold:
-                        matches.add((kb_term, lang))
-            for kb_eng in kb.get("english", []):
-                if fuzz.partial_ratio(text_low, kb_eng) >= threshold or kb_eng in text_low:
-                    matches.add((kb_eng, "english"))
-    # Direct English KB match
-    for kb_eng in kb.get("english", []):
-        if fuzz.partial_ratio(text_low, kb_eng) >= threshold or kb_eng in text_low:
-            matches.add((kb_eng, "english"))
+        try:
+            # fuzzy match english key with input
+            if fuzz.partial_ratio(eng_key.lower(), text_low) >= threshold or eng_key.lower() in text_low:
+                # add mapped native terms if they appear in KB
+                for lang, native_term in native_map.items():
+                    for kb_term in kb.get(lang, []):
+                        if fuzz.partial_ratio(native_term, kb_term) >= threshold or native_term in kb_term or kb_term in native_term:
+                            matches.add((kb_term, lang))
+                # also check english KB directly
+                for kb_eng in kb.get("english", []):
+                    if fuzz.partial_ratio(eng_key.lower(), kb_eng) >= threshold or eng_key.lower() in kb_eng:
+                        matches.add((kb_eng, "english"))
+        except Exception:
+            # defensive fallback — skip problematic mapping
+            continue
+
+    # Direct multilingual KB matches against text
+    for lang, terms in kb.items():
+        for term in terms:
+            try:
+                if fuzz.partial_ratio(term.lower(), text_low) >= threshold or term.lower() in text_low:
+                    matches.add((term, lang))
+            except Exception:
+                continue
+
     return matches
 
 # ---------------------------
 # Scoring heuristics
 # ---------------------------
-TOXIC_KEYWORDS = {"stupid", "inferior", "dirty", "backward", "lazy", "illiterate", "unclean", "hate", "fight"}
+# Keep toxic keywords light and general (no explicit slurs)
+TOXIC_KEYWORDS = {
+    "stupid", "inferior", "dirty", "backward", "lazy", "illiterate", "unclean", "hate", "fight", "terror", "villain"
+}
 
 def bias_score(text):
     matches = detect_bias_terms(text)
@@ -83,6 +218,7 @@ def fluency_score(text):
     words = text.strip().split()
     if not words:
         return 0.0
+    # approximate "fluency" by word count (demo heuristic)
     avg_len = len(words)
     if 8 <= avg_len <= 20:
         return 1.0
@@ -99,8 +235,12 @@ def simulated_generator(prompt, n_candidates=4):
         f"The {prompt} are hardworking and intelligent.",
         f"The {prompt} are lazy and stupid.",
         f"Many {prompt} traditions vary widely.",
-        f"{prompt} communities celebrate festivals joyfully."
+        f"{prompt} communities celebrate festivals joyfully.",
+        f"People from {prompt} deserve respect and equal opportunity.",
+        f"You can't generalize about all {prompt}; individuals differ.",
+        f"Some {prompt} people are influential in local politics."
     ]
+    # return random varied samples up to n_candidates
     return random.sample(templates, k=min(n_candidates, len(templates)))
 
 # ---------------------------
@@ -203,7 +343,8 @@ if __name__ == "__main__":
     print("📥 Enter prompts (కామా వేరు చేసి / कौमा से अलग करें):")
     user_input = input().strip()
     DEMO_PROMPTS = [p.strip() for p in user_input.split(",")] if user_input else [
-        "ముస్లిం సంప్రదాయాలు", "హిందూ పండుగలు", "दलित समुदाय", "ब्राह्मण परिवार", "Muslim traditions", "Hindu festivals", "కాపులు స్థానిక రాజకీయాల్లో", "Raju families"
+        "मुसलिम समुदाय", "हिंदू त्योहार", "दलित परिवार", "ब्राह्मण समाज", "Telugu farmers", "Tamil fishermen",
+        "Maratha politics", "Reddy families", "Kapu leaders", "Bengali artists", "Punjabi traditions", "Pakistani athletes"
     ]
 
     df = run_demo(DEMO_PROMPTS, out_csv="demo_results.csv")
